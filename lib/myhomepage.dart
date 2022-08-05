@@ -15,8 +15,9 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   String fileString = "";
   String fileName = "";
-  // double? _progress;
-  // UploadTask? uploadTask;
+  double? _progress;
+  UploadTask? uploadTask;
+  String? uploadingFile;
 
   // void singleFile() async {
   //   FilePickerResult? result = await FilePicker.platform.pickFiles();
@@ -56,6 +57,26 @@ class _MyHomePageState extends State<MyHomePage> {
 
   List<File>? files;
 
+  void uploadTask2() {
+    uploadTask!.snapshotEvents.listen((event) {
+      setState(() {
+        //uploadingFile = event.toString();
+        uploadingFile = event.ref.fullPath;
+        _progress =
+            event.bytesTransferred.toDouble() / event.totalBytes.toDouble();
+        //print(_progress.toString());
+      });
+      if (event.state == TaskState.success) {
+        _progress = null;
+        uploadingFile = null;
+        //print(_progress);
+        //Fluttertoast.showToast(msg: 'File added to the library');
+      }
+    }).onError((error) {
+      // do something to handle error
+    });
+  }
+
   void singleFile() async {
     FilePickerResult? result =
         await FilePicker.platform.pickFiles(allowMultiple: true);
@@ -63,15 +84,21 @@ class _MyHomePageState extends State<MyHomePage> {
     if (result != null) {
       files = result.paths.map((path) => File(path!)).toList();
 
-      for (var file1 in files!) {
+      for (int i = 0; i < files!.length; i++)
+      //for (var file1 in files!)
+      {
         // print(file1);
         // String file2 = file1.path;
         //file2.lastIndexOf("/");
-        String fileName =
-            file1.path.toString().substring(file1.path.lastIndexOf("/") + 1);
-        print(fileName);
+        String fileName = files![i]
+            .path
+            .toString()
+            .substring(files![i].path.lastIndexOf("/") + 1);
+        // print(fileName);
         final ref = FirebaseStorage.instance.ref().child(fileName);
-         ref.putFile(file1);
+        //ref.putFile(files![i]);
+        uploadTask = ref.putFile(files![i]);
+        uploadTask2();
       }
     } else {}
 
@@ -88,13 +115,14 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            // _progress != null
-            //     ? CircularProgressIndicator(
-            //         value: _progress, //controller.value,
-            //         semanticsLabel: 'Linear progress indicator',
-            //       )
-            //     : const SizedBox(height: 10),
-            // Text("Progress: $_progress"),
+            _progress != null
+                ? CircularProgressIndicator(
+                    value: _progress, //controller.value,
+                    semanticsLabel: 'Linear progress indicator',
+                  )
+                : const SizedBox(height: 10),
+            Text("Progress: $_progress"),
+            Text("Event: $uploadingFile"),
             TextButton(
                 onPressed: () {
                   singleFile();
